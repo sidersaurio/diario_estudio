@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diario de Estudio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&family=JetBrains+Mono:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <main class="container">
+        <header>
+            <h1>Diario de Estudio</h1>
+            <div class="stats-bar" id="stats-bar" aria-label="Estadísticas">
+                <div class="stat">
+                    <span class="stat-icon" aria-hidden="true">🔥</span>
+                    <span class="stat-number" id="streak-number">0</span>
+                    <span class="stat-label">días racha</span>
+                </div>
+                <div class="stat-divider" aria-hidden="true"></div>
+                <div class="stat">
+                    <span class="stat-number" id="weekly-number">0</span>
+                    <span class="stat-label">min esta semana</span>
+                </div>
+                <div class="stat-divider" aria-hidden="true"></div>
+                <div class="stat">
+                    <span class="stat-number" id="monthly-number">0</span>
+                    <span class="stat-label">días este mes</span>
+                </div>
+            </div>
+        </header>
+
+        <section class="form-section">
+            <h2>Nueva sesión</h2>
+            <form id="session-form">
+                <div class="form-group">
+                    <label for="date">Fecha</label>
+                    <input type="date" id="date" name="date" required>
+                </div>
+                <div class="form-group">
+                    <label for="topic">Tema</label>
+                    <input type="text" id="topic" name="topic" placeholder="Ej: JavaScript, React, Algoritmos..." required>
+                </div>
+                <div class="form-group">
+                    <label for="minutes">Minutos</label>
+                    <input type="number" id="minutes" name="minutes" min="1" placeholder="Ej: 45" required>
+                </div>
+                <button type="submit" class="btn-primary">Guardar sesión</button>
+            </form>
+        </section>
+
+        <section class="sessions-section">
+            <h2>Historial</h2>
+            <ul id="sessions-list" class="sessions-list"></ul>
+            <p id="empty-message" class="empty-message" hidden>No hay sesiones todavía. ¡Empieza a estudiar!</p>
+        </section>
+    </main>
+    <script src="app.js"></script>
+</body>
+</html>
