@@ -56,6 +56,26 @@ Vanilla HTML/CSS/JS study tracker. No build step, no dependencies, no server req
 - Display: "X días"
 - Element: `#monthly-number` in `.monthly-card` (blue/indigo gradient)
 
+### Best Streak (`app.js:calculateBestStreak`)
+- Scans all unique session dates sorted chronologically (YYYY-MM-DD)
+- Counts longest run of consecutive days anywhere in history
+- Same date arithmetic as `calculateStreak` (local midnight via `new Date(iso + 'T00:00:00')`, no UTC)
+- Returns integer (0 if no sessions)
+- Element: `#best-streak-number` in second `.stat` (violet gradient)
+
+### Heatmap (`app.js:getHeatMapData`, `app.js:renderHeatMap`)
+- 52 weeks × 7 days (Mon–Sun), most recent week rightmost (GitHub style)
+- Pure functions: `getDailyMinutes()`, `getMondayOfWeek()`, `getIntensityLevel()`, `getHeatMapData()`, `formatTooltipDate()`
+- All date arithmetic via `new Date(iso + 'T00:00:00')` (local, no UTC)
+- Intensity levels: 0=0min, 1=1–59, 2=60–119, 3=120–179, 4=180+ min
+- Future days (> today) rendered as neutral gray (level 0 visual), no tooltip
+- Tooltip on hover/focus: "DD-MM-YYYY: X min"
+- Month labels (Ene, Feb...) atop columns
+- Day labels (Lun–Dom) on left
+- Responsive: cell 11px/2px gap desktop, 9px/1px mobile (≤480px)
+- Element: `#heatmap` in `.heatmap-section` after sessions
+- Tests: `node --test tests/heatmap.test.js` (11 tests)
+
 ## Common Tasks
 
 ### Add a Feature
@@ -83,3 +103,8 @@ Vanilla HTML/CSS/JS study tracker. No build step, no dependencies, no server req
 * Keep it brief (maximum ~50 lines): summarize or remove anything that is no longer useful.
 * If something becomes a permanent rule, propose moving it to `AGENTS.md` instead of leaving it in memory.
 * Never store sensitive data (keys, tokens, personal data).
+
+## Comandos
+- Tests: `node --test`
+## Reglas
+- Lee `docs/constitution.md` y la spec activa (`specs/NNN-*/`) antes de tocar código.

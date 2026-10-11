@@ -10,8 +10,10 @@ const minutesInput = document.getElementById('minutes');
 const sessionsList = document.getElementById('sessions-list');
 const emptyMessage = document.getElementById('empty-message');
 const streakNumber = document.getElementById('streak-number');
+const bestStreakNumber = document.getElementById('best-streak-number');
 const weeklyNumber = document.getElementById('weekly-number');
 const monthlyNumber = document.getElementById('monthly-number');
+const heatmapContainer = document.getElementById('heatmap');
 
 // Inicializar fecha por defecto a hoy (formato YYYY-MM-DD para input[type=date])
 function getTodayISO() {
@@ -67,6 +69,37 @@ function calculateStreak(sessions) {
     }
 
     return streak;
+}
+
+// Calcular mejor racha histórica (máximo de días consecutivos en cualquier momento)
+function calculateBestStreak(sessions) {
+    if (sessions.length === 0) return 0;
+
+    // Días únicos con sesión, ordenados cronológicamente (YYYY-MM-DD)
+    const days = [...new Set(sessions.map(s => s.date))].sort();
+
+    let best = 0;
+    let current = 0;
+    let prevDate = null;
+
+    for (const d of days) {
+        if (prevDate) {
+            const pd = new Date(prevDate + 'T00:00:00');
+            pd.setDate(pd.getDate() + 1);
+            const nextISO = pd.toISOString().split('T')[0];
+            if (d === nextISO) {
+                current++;
+            } else {
+                current = 1;
+            }
+        } else {
+            current = 1;
+        }
+        best = Math.max(best, current);
+        prevDate = d;
+    }
+
+    return best;
 }
 
 // Calcular total de minutos esta semana (lunes a domingo, fecha local)
@@ -131,6 +164,75 @@ function calculateMonthlyDays(sessions) {
     return daysInMonth.size;
 }
 
+// ===== Heatmap pure functions (no DOM, no localStorage, receive todayISO) =====
+
+// Agrupa sesiones por día y suma minutos
+function getDailyMinutes(sessions) {
+    const daily = new Map();
+    for (const s of sessions) {
+        if (!s || typeof s.date !== 'string' || typeof s.minutes !== 'number') continue;
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(s.date)) continue;
+        if (s.minutes < 1) continue;
+
+        const current = daily.get(s.date) || 0;
+        daily.set(s.date, current + s.minutes);
+    }
+    return daily;
+}
+
+// Devuelve el lunes (YYYY-MM-DD) de la semana que contiene dateISO
+function getMondayOfWeek(dateISO) {
+    const d = new Date(dateISO + 'T00:00:00');
+    const day = d.getDay(); // 0=Sun, 1=Mon...
+    const diffToMonday = (day + 6) % 7;
+    d.setDate(d.getDate() - diffToMonday);
+    return d.toISOString().split('T')[0];
+}
+
+// Asigna nivel de intensidad según minutos
+function getIntensityLevel(minutes) {
+    if (minutes <= 0) return 0;
+    if (minutes < 60) return 1;
+    if (minutes < 120) return 2;
+    if (minutes < 180) return 3;
+    return 4;
+}
+
+// Genera matriz 52x7 para el heatmap
+function getHeatMapData(sessions, todayISO, weeksBack = 52) {
+    const dailyMinutes = getDailyMinutes(sessions);
+    const todayMonday = getMondayOfWeek(todayISO);
+
+    const weeks = [];
+
+    for (let w = 0; w < weeksBack; w++) {
+        const week = [];
+        const monday = new Date(todayMonday + 'T00:00:00');
+        monday.setDate(monday.getDate() - w * 7);
+
+        for (let d = 0; d < 7; d++) {
+            const cellDate = new Date(monday);
+            cellDate.setDate(monday.getDate() + d);
+            const cellISO = cellDate.toISOString().split('T')[0];
+
+            const minutes = dailyMinutes.get(cellISO) || 0;
+            const isFuture = cellISO > todayISO;
+            const level = isFuture ? 0 : getIntensityLevel(minutes);
+
+            week.push({ date: cellISO, minutes, level, isFuture });
+        }
+        weeks.push(week);
+    }
+
+    return { weeks, startDate: todayMonday };
+}
+
+// Formatea YYYY-MM-DD a DD-MM-YYYY para tooltip
+function formatTooltipDate(isoDate) {
+    const [year, month, day] = isoDate.split('-');
+    return `${day}-${month}-${year}`;
+}
+
 // Renderizar lista de sesiones (más reciente arriba)
 function renderSessions(sessions) {
     sessionsList.innerHTML = '';
@@ -168,13 +270,76 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+// Renderizar heatmap
+function renderHeatMap(heatMapData, todayISO) {
+    if (!heatmapContainer) return;
+
+    const { weeks } = heatMapData;
+    const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+    // Build HTML: weeks as columns (GitHub style), days as rows
+    // We iterate weeks in reverse (week 51 first = top, week 0 last = bottom)
+    // But for grid layout, we need columns = weeks, so we render week 0 first (leftmost column)
+    // Actually GitHub has most recent week on the right. Let's do columns = weeks, left to right = oldest to newest
+    // So week 51 (oldest) = column 0, week 0 (newest) = column 51
+
+    let html = '<div class="heatmap-grid" role="img" aria-label="Mapa de calor de actividad de estudio">';
+
+    // Day labels (Mon-Sun) on the left
+    const dayLabels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+    html += '<div class="heatmap-day-labels" aria-hidden="true">';
+    for (const label of dayLabels) {
+        html += `<div class="heatmap-day-label">${label}</div>`;
+    }
+    html += '</div>';
+
+    // Grid: 52 columns (weeks), 7 rows (days)
+    html += '<div class="heatmap-cells">';
+    for (let d = 0; d < 7; d++) {
+        for (let w = weeks.length - 1; w >= 0; w--) {
+            const cell = weeks[w][d];
+            const levelClass = cell.isFuture ? 'heatmap-cell--future' : `heatmap-cell--level-${cell.level}`;
+            const title = cell.isFuture
+                ? ''
+                : `${formatTooltipDate(cell.date)}: ${cell.minutes} min`;
+            html += `<div class="heatmap-cell ${levelClass}" 
+                data-date="${cell.date}" 
+                data-level="${cell.level}" 
+                data-minutes="${cell.minutes}"
+                ${title ? `title="${title}"` : ''}
+                tabindex="0" role="cell" aria-label="${title || 'Día futuro'}"></div>`;
+        }
+    }
+    html += '</div>';
+
+    // Month labels (top) - find first occurrence of each month
+    html += '<div class="heatmap-month-labels" aria-hidden="true">';
+    let lastMonth = -1;
+    for (let w = weeks.length - 1; w >= 0; w--) {
+        const cell = weeks[w][0]; // Monday of each week
+        const month = parseInt(cell.date.split('-')[1], 10) - 1;
+        if (month !== lastMonth) {
+            const xPos = ((weeks.length - 1 - w) / weeks.length) * 100;
+            html += `<div class="heatmap-month-label" style="left: ${xPos}%">${monthNames[month]}</div>`;
+            lastMonth = month;
+        }
+    }
+    html += '</div>';
+
+    html += '</div>';
+    heatmapContainer.innerHTML = html;
+}
+
 // Actualizar UI completa
 function refreshUI() {
     const sessions = getSessions();
+    const todayISO = getTodayISO();
     renderSessions(sessions);
     streakNumber.textContent = calculateStreak(sessions);
+    bestStreakNumber.textContent = calculateBestStreak(sessions);
     weeklyNumber.textContent = formatMinutes(calculateWeeklyTotal(sessions));
     monthlyNumber.textContent = calculateMonthlyDays(sessions);
+    renderHeatMap(getHeatMapData(sessions, todayISO), todayISO);
 }
 
 // Manejar envío del formulario

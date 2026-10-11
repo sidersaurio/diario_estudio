@@ -1,23 +1,39 @@
-# MEMORY.md — Diario de Estudio 
-Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo que ya no 
-aporte. 
+# Memory - Diario de Estudio
 
-## Estado actual 
-- v1 funcionando: registrar sesiones (fecha, tema, minutos), racha actual y lista de 
-sesiones. 
-- Datos en localStorage. 
-- **Total semanal (lunes-domingo) mostrado en tarjeta en header** 
-- **Días estudiados este mes mostrado en tarjeta en header** 
-- `.gitignore` cubre basura de SO/editor, temporales, logs y secretos locales; no se ignoran artefactos de build ni dependencias porque el proyecto no los usa.
+## Current Status (2026-10-11)
+- Added **Best Streak** (mejor racha) feature
+- Added **Heatmap** (mapa de calor) feature - 52 weeks GitHub-style visualization
 
-## Aprendizajes y errores a evitar 
-- (vacío por ahora) 
+## Decisions Made
 
-## Decisiones (y por qué) 
-- Sin backend ni dependencias: cualquiera debe poder abrirlo con doble clic. 
-- Fecha editable en el formulario: permite registrar días pasados y ver la racha crecer. 
-- **Semana = lunes a domingo (ISO), basada en fecha local actual** 
-- **Mes = mes actual (fecha local), excluye fechas futuras** 
+### Best Streak
+1. **Icon**: 🏆 (trofeo)
+2. **Color**: Violet/Morado (`--violet-dark: #5E3FA0`)
+3. **Mobile layout**: Single row with flex-wrap (dividers hidden on ≤480px)
+4. **Tie handling**: Shows both equal, no special indicator
+5. **Persistence**: Recalculates from localStorage on each render; decreases if sessions deleted
+6. **Label**: "mejor racha"
 
-## Próximos pasos 
-- (vacío por ahora) 
+### Heatmap
+1. **Palette**: GitHub-style green scale (5 levels: `--heatmap-level-0` through `--heatmap-level-4`)
+2. **Cell size**: 11px desktop / 9px mobile (≤480px), gap 2px / 1px
+3. **Week orientation**: Mon–Sun, most recent week rightmost (GitHub style)
+4. **Future days**: Neutral gray (`--heatmap-future`), no tooltip
+5. **Tooltips**: Native `title` + CSS `::after` on hover/focus, format "DD-MM-YYYY: X min"
+6. **Month labels**: Top row (Ene, Feb...), day labels left (Lun–Dom)
+7. **Keyboard accessible**: `tabindex="0"`, focus shows tooltip + scale
+8. **Tests**: 11 unit tests in `tests/heatmap.test.js`, all passing
+
+## Files Modified
+- `app.js`: + `calculateBestStreak()`, `getDailyMinutes()`, `getMondayOfWeek()`, `getIntensityLevel()`, `getHeatMapData()`, `formatTooltipDate()`, `renderHeatMap()`, DOM ref `#heatmap`, `refreshUI()` update
+- `index.html`: + 4th stat with 🏆, `#best-streak-number`, label; + `.heatmap-section` with `#heatmap`
+- `styles.css`: + `--violet`, `--violet-dark` tokens; `:nth-child(2) .stat-number` color; + heatmap variables, `.heatmap-section`, `.heatmap-grid`, `.heatmap-cells`, `.heatmap-cell`, responsive
+- `tests/heatmap.test.js`: **New** - 11 unit tests for pure functions
+- `AGENTS.md`: Documented `calculateBestStreak()` and heatmap functions in Key Implementation Details
+- `specs/001-heat-map/spec.md`: **New** - full specification
+
+## Algorithm Notes
+- `calculateBestStreak` iterates unique dates sorted ascending, uses local-midnight arithmetic
+- `getHeatMapData` builds 52×7 matrix (weeks×days), receives `todayISO` param, truncates >52 weeks
+- All date math uses `new Date(iso + 'T00:00:00')` to avoid UTC shifts (Constitución #3)
+- Pure functions have no DOM/localStorage dependencies

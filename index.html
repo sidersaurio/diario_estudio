@@ -21,6 +21,12 @@
                 </div>
                 <div class="stat-divider" aria-hidden="true"></div>
                 <div class="stat">
+                    <span class="stat-icon" aria-hidden="true">🏆</span>
+                    <span class="stat-number" id="best-streak-number">0</span>
+                    <span class="stat-label">mejor racha</span>
+                </div>
+                <div class="stat-divider" aria-hidden="true"></div>
+                <div class="stat">
                     <span class="stat-number" id="weekly-number">0</span>
                     <span class="stat-label">min esta semana</span>
                 </div>
@@ -55,6 +61,11 @@
             <h2>Historial</h2>
             <ul id="sessions-list" class="sessions-list"></ul>
             <p id="empty-message" class="empty-message" hidden>No hay sesiones todavía. ¡Empieza a estudiar!</p>
+        </section>
+
+        <section class="heatmap-section">
+            <h2>Actividad (últimas 52 semanas)</h2>
+            <div id="heatmap" class="heatmap" role="img" aria-label="Mapa de calor de minutos de estudio por día"></div>
         </section>
     </main>
     <script src="app.js"></script>
